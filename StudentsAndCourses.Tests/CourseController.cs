@@ -1,18 +1,15 @@
+using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Xunit;
-using StudentsAndCourses.Library.Data;
 using StudentsAndCourses.Library.Interfaces;
 using StudentsAndCourses.Library.Models.Binding;
 using StudentsAndCourses.Library.Models.Entity;
-using StudentsAndCourses.Library.Models.Interfaces;
 using StudentsAndCourses.Library.Models.ViewModels;
 using StudentsAndCourses.Web.Controllers;
 using System.Collections.Generic;
 using System.Linq;
-using System;
+using Xunit;
 
 namespace StudentsAndCourses.Tests
 {
@@ -25,24 +22,11 @@ namespace StudentsAndCourses.Tests
         private UpdateCourse updateCourse;
         private Course course;
         private List<Course> courses;
-        private Mock<ICourse> courseMock;
-        private List<ICourse> coursesMock;
-        private Mock<IAddCourse> addCourseMock;
-        private Mock<IUpdateCourse> updateCourseMock;
-        private Mock<ICourseViewModel> courseViewModelMock;
-        private List<ICourseViewModel> coursesViewModelMock;
         public CourseControllerTest()
         {
             //mock setup
-            courseMock = new Mock<ICourse>();
-            coursesMock = new List<ICourse> { courseMock.Object };
-            addCourseMock = new Mock<IAddCourse>();
-            updateCourseMock = new Mock<IUpdateCourse>();
             course = new Course();
             courses = new List<Course>();
-            //viewmodels mock setup
-            courseViewModelMock = new Mock<ICourseViewModel>();
-            coursesViewModelMock = new List<ICourseViewModel>();
 
             //sample models
             addCourse = new AddCourse { Code = "CS101", Title = "Computing Basics" };
@@ -51,26 +35,12 @@ namespace StudentsAndCourses.Tests
             //controller setup
             //courseControllerMock = new Mock<ICourseController>();
             _logger = new Mock<ILogger<CourseController>>();
-            var registrationMock = new Mock<IRegistration>();
-            var registrationsMock = new List<IRegistration>() { registrationMock.Object };
             var courseResultsMock = new Mock<IActionResult>();
 
             mockRepo = new Mock<IRepositoryWrapper>();
             var allCourses = GetCourses();
             courseController = new CourseController(_logger.Object, mockRepo.Object);
         }
-        [Fact]
-        public void GetAllCourses_Test()
-        {
-            //Arrange
-            mockRepo.Setup(repo => repo.Courses.FindAll()).Returns(GetCourses());
-            mockRepo.Setup(repo => repo.Registrations.FindByCondition(r => r.CourseId == It.IsAny<int>())).Returns(GetRegistrations());
-            //Act
-            var controllerActionResult = courseController.Get();
-            //Assert
-            Assert.NotNull(controllerActionResult);
-        }
-
         [Fact]
         public void AddCourse_Test()
         {
@@ -83,15 +53,57 @@ namespace StudentsAndCourses.Tests
             Assert.IsType<ActionResult<CourseViewModel>>(controllerActionResult);
         }
         [Fact]
+        public void GetAllCourses_Test()
+        {
+            //Arrange
+            mockRepo.Setup(repo => repo.Courses.FindAll()).Returns(GetCourses());
+            mockRepo.Setup(repo => repo.Registrations.FindByCondition(r => r.CourseId == It.IsAny<int>())).Returns(GetRegistrations());
+            //Act
+            var controllerActionResult = courseController.Get();
+            //Assert
+            Assert.NotNull(controllerActionResult);
+        }
+        [Fact]
+        public void Get_Course_by_ID()
+        {
+            mockRepo.Setup(repo => repo.Courses.FindByCondition(c => c.Id == It.IsAny<int>())).Returns(GetCourses());
+            //mockRepo.Setup(repo => repo.Registrations.FindByCondition(c => c.Id == It.IsAny<int>()).Select(s => s.Student)).Returns(GetStudents());
+            //Act
+            var controllerActionResult = courseController.Get(1);
+            //Assert
+            Assert.NotNull(controllerActionResult);
+            controllerActionResult.Should().BeOfType<ActionResult<CourseViewModel>>();
+        }
+        [Fact]
+        public void UpdateCourse()
+        {
+            mockRepo.Setup(repo => repo.Courses.FindByCondition(c => c.Id == It.IsAny<int>())).Returns(GetCourses());
+            var controllerActionResult = courseController.Put(1, updateCourse);
+            Assert.NotNull(controllerActionResult);
+        }
+        [Fact]
         public void DeleteCourse_Test()
         {
             //Arrange
             mockRepo.Setup(repo => repo.Courses.FindByCondition(r => r.Id == It.IsAny<int>())).Returns(GetCourses());
+            mockRepo.Setup(repo => repo.Registrations.FindByCondition(c => c.Id == It.IsAny<int>())).Returns(GetRegistrations());
             mockRepo.Setup(repo => repo.Courses.Delete(GetCourse()));
             //Act
             var controllerActionResult = courseController.Delete(It.IsAny<int>());
             //Assert
             Assert.NotNull(controllerActionResult);
+        }
+        private IEnumerable<Course> GetCourses()
+        {
+            var courses = new List<Course> {
+            new Course(){Id=1, Code="CS101", Title="Computing Basics"},
+            new Course(){Id=2, Code="CS102", Title="Computing Intermediate"}
+            };
+            return courses;
+        }
+        private Course GetCourse()
+        {
+            return GetCourses().ToList()[0];
         }
         private IEnumerable<Registration> GetRegistrations()
         {
@@ -100,21 +112,9 @@ namespace StudentsAndCourses.Tests
                 new Registration { Id = 2, Course = GetCourses().ToList()[1] },
             };
         }
-        private Registration GetRegistration()
-        {
-            return GetRegistrations().ToList()[0];
-        }
-        private IEnumerable<Course> GetCourses()
-        {
-            var courses = new List<Course> {
-            new Course(){Id=1, Code="CS101", Title="Computing Basics"},
-            new Course(){Id=1, Code="CS102", Title="Computing Intermediate"}
-            };
-            return courses;
-        }
-        private Course GetCourse()
-        {
-            return GetCourses().ToList()[0];
-        }
+        //private Registration GetRegistration()
+        //{
+        //    return GetRegistrations().ToList()[0];
+        //}
     }
 }

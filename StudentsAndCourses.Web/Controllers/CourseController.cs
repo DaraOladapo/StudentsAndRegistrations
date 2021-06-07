@@ -56,8 +56,7 @@ namespace StudentsAndCourses.Web.Controllers
                 return NotFound($"Course with ID {id} not found.");
             }
             _logger.LogInformation($"Course with id {id} gotten");
-            var students = repository.Registrations.FindByCondition(c => c.Course.Id == id).Select(c => c.Student).ToList();
-            //var students = dbContext.Registrations.Where(c => c.Course.Id == id).Select(c => c.Student).ToList();
+            var students = repository.Registrations.FindByCondition(c => c.Course.Id == id).Select(s => s.Student).ToList();
             var courseFoundViewModel = new CourseViewModel { Course = courseFound, Students = students };
             return courseFoundViewModel;
         }
@@ -67,7 +66,6 @@ namespace StudentsAndCourses.Web.Controllers
         public ActionResult<CourseViewModel> Post([FromBody] AddCourse course)
         {
             var existingCourse = repository.Courses.FindByCondition(c => c.Code == course.Code && c.Title == course.Title).FirstOrDefault();
-            //var existingCourse = dbContext.Courses.FirstOrDefault(c => c.Code == course.Code && c.Title == course.Title);
             if (existingCourse != null)
             {
                 _logger.LogError("Data conflict");
@@ -78,10 +76,7 @@ namespace StudentsAndCourses.Web.Controllers
             if (string.IsNullOrEmpty(course.Code))
                 return BadRequest("Course code is empty");
             var addedCourse = repository.Courses.Create(new Course { Code = course.Code, Title = course.Title });
-            //var addedCourse = dbContext.Courses.Add(new Course { Code = course.Code, Title = course.Title }).Entity;
-            //var addedCourse = dbContext.Courses.Add(new Course { Code = course.Code, Title = course.Title }).Entity;
             repository.Save();
-            //dbContext.SaveChanges();
             return new CourseViewModel { Course = addedCourse, Students = new List<Student>() };
         }
 
@@ -127,7 +122,7 @@ namespace StudentsAndCourses.Web.Controllers
             repository.Courses.Delete(courseToDelete);
             repository.Save();
             _logger.LogCritical($"deleting {courseToDelete.Code} completed");
-            return Ok("Course deleted");
+            return NoContent();
         }
     }
 }
